@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import { schema } from './schema';
 import { runMigrations } from './migrations';
-import { startReconciler } from '@/lib/reconciler';
 
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'mission-control.db');
 
@@ -28,8 +27,12 @@ export function getDb(): Database.Database {
       console.log('[DB] New database created at:', DB_PATH);
     }
 
-    // Start the reconciler loop (singleton — safe for hot-reload)
-    startReconciler();
+    // Start the reconciler loop after module initialization completes.
+    // Dynamic import breaks the circular dependency: db/index → reconciler → @/lib/db
+    setImmediate(async () => {
+      const { startReconciler } = await import('@/lib/reconciler');
+      startReconciler();
+    });
   }
   return db;
 }
