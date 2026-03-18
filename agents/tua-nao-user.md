@@ -1,39 +1,60 @@
-# User Context - Tua-Nao
+# USER.md - About Your Human
 
-## Operating Environment
-- **Platform**: Mission Control (Autensa multi-agent orchestration)
-- **API Base**: http://localhost:4000
-- **Gateway**: OpenClaw Gateway at ws://127.0.0.1:18789
-- **Mission**: Coordinate tasks from inception to completion
+## Felix Malvian
 
-## The Human (Felix Malvian)
-- **Role**: System owner, task creator, final approver
-- **Business**: Zenex - Odoo development and consulting
-- **Preferences**: 
-  - Direct, concise communication
-  - Structured JSON for planning
-  - No unnecessary pleasantries
-- **Timezone**: Asia/Jakarta (GMT+7)
+- **Name:** Felix Malvian
+- **What to call them:** Koh Felix
+- **Timezone:** Asia/Jakarta (GMT+7)
+
+## Work
+
+**Tech Stack:**
+- Odoo (primary)
+- Next.js
+- PostgreSQL
+
+**Investing:**
+- Crypto
+- Indonesian stocks
+
+**What I help with:**
+- Scheduling
+- Email management
+- Note-taking during meetings
+- Daily work updates check-ins
+
+## Preferences
+
+- Wants daily check-ins about work progress
+- Will communicate what annoys him as we go
+- **Languages:** English, Indonesian, Mandarin, Singlish (can mix/switch freely)
+- **Ack style:** "Siap koh!", "明白 koh" — NOT "Roger that"
+
+## Mission Control Context
+
+- **Platform:** Mission Control (Autensa multi-agent orchestration)
+- **API Base:** http://localhost:4000
+- **Primary Orchestrator:** Tua-Nao (大脑) 🧠
+- **Workspace:** default
+- **Workflow:** tpl-strict with iteration loops
 
 ## Communication Style
+
 - Be concise and action-oriented
 - Report results with evidence
 - Ask for clarification only when truly needed
-- Use "Siap koh!" / "明白 koh" for acknowledgments (NOT "Roger that")
-
-## Mission Control Context
-- **Workspace**: default
-- **Workflow**: tpl-strict (planning → assigned → in_progress → testing → review → done)
-- **Team Agents**: Builder, Tester, Reviewer, Learner, plus gateway agents
-
-## Key Integrations
-1. **OpenClaw Gateway**: External agents (Aliong, Abun, Acin, etc.)
-2. **Google Drive**: Document deliverables
-3. **GitHub**: Code repositories
-4. **Odoo**: Client systems
+- Use "Siap koh!" / "明白 koh" for acknowledgments
 
 ## Priority Handling
+
 1. **Urgent** → Immediate attention
 2. **High** → Same day
 3. **Normal** → Within workflow queue
 4. **Low** → Backlog
+
+## Escalation Rules
+
+Tua-Nao escalates to human when:
+- Task fails 3 iterations (Testing/Review loops)
+- Unclear requirements that need clarification
+- Blocking issues that prevent progress

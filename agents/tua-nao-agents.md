@@ -1,103 +1,79 @@
-# Team Roster - Tua-Nao's Agent Network
+# AGENTS.md - Team Roster
 
-## Core Mission Control Team
+## Mission Control Internal Team
 
 ### Builder Agent (🛠️)
-**Role**: Implementation specialist
-**Does**: Writes code, creates files, builds projects
-**When to use**: Any coding task, file creation, project setup
-**Failure handling**: Gets tasks back from QA with fix notes
+**Role**: Implementation specialist  
+**Does**: Writes code, creates files, builds projects  
+**When to use**: Any coding task, file creation, project setup  
+**Failure handling**: Gets tasks back from QA with fix notes  
+**Works in**: Assigned, In Progress
 
 ### Tester Agent (🧪)
-**Role**: Front-end QA specialist
-**Does**: Tests from user perspective - clicks, UI, rendering, links
-**When to use**: After Builder completes, before Review
-**Key question**: "Does it WORK when you USE it?"
+**Role**: Front-end QA specialist  
+**Does**: Tests from user perspective - clicks, UI, rendering, links  
+**When to use**: After Builder completes, before Review  
+**Key question**: "Does it WORK when you USE it?"  
+**Works in**: Testing column
 
 ### Reviewer Agent (🔍)
-**Role**: Code quality gatekeeper
-**Does**: Reviews code structure, patterns, best practices
-**When to use**: Final verification before Done
-**Key question**: "Is the CODE good?"
+**Role**: Code quality gatekeeper  
+**Does**: Reviews code structure, patterns, best practices  
+**When to use**: Final verification before Done  
+**Key question**: "Is the CODE good?"  
+**Works in**: Review column
 
 ### Learner Agent (📚)
-**Role**: Pattern observer
-**Does**: Captures lessons from failures and successes
-**When to use**: Watches all transitions, writes to knowledge base
-**Output**: Failure patterns, fix patterns, checklists
+**Role**: Pattern observer  
+**Does**: Captures lessons from failures and successes  
+**When to use**: Watches all transitions, writes to knowledge base  
+**Output**: Failure patterns, fix patterns, checklists  
+**Works across**: All columns
 
-## Gateway Agents (External)
+### Odoo Analyst (📊)
+**Role**: Odoo Technical Analyst  
+**Does**: Odoo module analysis, technical proposals, documentation  
+**When to use**: Odoo-related tasks, technical analysis, proposals  
+**Works in**: Assigned, In Progress
 
-### Aliong (🐉)
-**Role**: CEO / Manager
-**Does**: Direct user communication, task routing, QA review
-**Reports to**: Felix (Founder)
-**Can talk to**: All agents
-
-### Abun (👨‍💻)
-**Role**: CTO / Engineering
-**Does**: All coding tasks (Android, Odoo, Next.js)
-**Reports to**: Aliong
-**When to use**: Any development work
-
-### Acin (🧪)
-**Role**: QA Lead
-**Does**: Testing, QA, code review, accuracy checking
-**Reports to**: Aliong
-**When to use**: Quality assurance, testing verification
-
-### Abui (🔗)
-**Role**: Research Lead
-**Does**: Research, data gathering, analysis
-**Reports to**: Aliong
-
-### Ahok (📋)
-**Role**: COO / Operations
-**Does**: Operations, documentation, coordination
-**Reports to**: Aliong
-
-### Ahuat (💰)
-**Role**: CFO / Finance Coord
-**Does**: Financial coordination, data analysis
-**Reports to**: Aliong
-**Subordinates**: Achai (research), Akim (analysis)
-
-### Aseng (🤖)
-**Role**: Customer Support
-**Does**: Customer-facing Telegram bot
-**Reports to**: Aliong
-
-### Acun (🛡️)
-**Role**: CSO / Security Lead
-**Does**: Security assessments, pentesting
-**Reports to**: Aliong
-
-## Workflow
+## Workflow with Iteration
 
 ```
-┌─────────┐    ┌──────────┐    ┌─────────┐    ┌─────────┐    ┌──────┐
-│  Inbox  │───▶│ Planning │───▶│Assigned │───▶│In Prog  │───▶│Testing│
-└─────────┘    └──────────┘    └─────────┘    └─────────┘    └───┬───┘
-                                                                   │
-                              ┌──────────────┐                     │
-                              │     Done     │◀────────────────────┘
-                              └──────────────┘      (if pass)
-                                   ▲
-                                   │
-                              ┌─────────┐
-                              │ Review  │
-                              └─────────┘
+┌─────────┐    ┌──────────┐    ┌─────────┐    ┌─────────┐
+│  Inbox  │───▶│ Planning │───▶│Assigned │───▶│In Prog  │
+└─────────┘    └──────────┘    └─────────┘    └────┬────┘
+                                                   │
+              ┌────────────────────────────────────┘
+              │ (if testing/review fails, max 3x)
+              ▼
+┌─────────┐   ┌─────────┐   ┌─────────┐
+│Testing  │──▶│ Review  │──▶│  Done   │
+└────┬────┘   └─────────┘   └─────────┘
+     │
+     └─────▶ (fail) ─────▶ Back to Assigned
+                    (retry count + 1)
+                    
+After 3 failures:
+     └─────▶ (escalate) ─▶ Inbox + Human notification
 ```
 
 ## Handoff Rules
+
 1. **Builder** → **Tester** (after implementation)
 2. **Tester** → **Review** (if front-end tests pass)
-3. **Review** → **Done** (if code quality passes)
-4. **Tester fail** → **Builder** (with specific issues)
-5. **Review fail** → **Builder** (with code issues)
-6. **External agents** → Report back to Tua-Nao for status updates
+3. **Tester fail** → **Builder** (with specific issues, retry+1)
+4. **Review** → **Done** (if code quality passes)
+5. **Review fail** → **Builder** (with code issues, retry+1)
+6. **3 failures** → Escalate to human (Tua-Nao notifies)
 
-## Communication Protocol
-- Specific task → Specialist agent
-- General/mixed → Tua-Nao coordinates
-- Blocking issues → Escalate to Aliong
+## Retry Counter
+
+Each task tracks:
+- `retry_count`: Number of times returned from Testing/Review
+- `failure_reasons`: Array of failure explanations
+- `escalated`: Boolean flag after 3 failures
+
+When `retry_count >= 3`:
+- Task moves to Inbox
+- Status set to "escalated"
+- Human notification sent with failure summary
