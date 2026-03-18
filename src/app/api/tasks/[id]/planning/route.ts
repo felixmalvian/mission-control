@@ -8,8 +8,9 @@ import { extractJSON } from '@/lib/planning-utils';
 export const dynamic = 'force-dynamic';
 
 // Default planning session prefix for OpenClaw
+// Uses Tua-Nao (大脑 - The Brain) as Mission Control Orchestrator
 // Can be overridden per-agent via the session_key_prefix column on agents table
-const DEFAULT_SESSION_KEY_PREFIX = 'agent:main:';
+const DEFAULT_SESSION_KEY_PREFIX = 'agent:tua-nao:';
 
 // GET /api/tasks/[id]/planning - Get planning state
 export async function GET(

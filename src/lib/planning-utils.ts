@@ -56,8 +56,10 @@ export async function getMessagesFromOpenClaw(
   sessionKey: string
 ): Promise<Array<{ role: string; content: string }>> {
   try {
+    console.log('[Planning Utils] Fetching messages for session:', sessionKey);
     const client = getOpenClawClient();
     if (!client.isConnected()) {
+      console.log('[Planning Utils] Connecting to OpenClaw...');
       await client.connect();
     }
 
@@ -72,20 +74,35 @@ export async function getMessagesFromOpenClaw(
       limit: 50,
     });
 
+    console.log('[Planning Utils] chat.history returned', result.messages?.length || 0, 'messages');
+
     const messages: Array<{ role: string; content: string }> = [];
 
     for (const msg of result.messages || []) {
+      console.log('[Planning Utils] Processing message, role:', msg.role, 'content type:', typeof msg.content, 'isArray:', Array.isArray(msg.content));
       if (msg.role === 'assistant') {
-        const textContent = msg.content?.find((c) => c.type === 'text');
-        if (textContent?.text && textContent.text.trim().length > 0) {
+        // Handle different content formats
+        let text = '';
+        if (Array.isArray(msg.content)) {
+          const textContent = msg.content.find((c) => c.type === 'text');
+          text = textContent?.text || '';
+        } else if (typeof msg.content === 'string') {
+          text = msg.content;
+        }
+        
+        if (text.trim().length > 0) {
+          console.log('[Planning Utils] Found assistant message, length:', text.length);
           messages.push({
             role: 'assistant',
-            content: textContent.text,
+            content: text,
           });
+        } else {
+          console.log('[Planning Utils] Assistant message has no text content');
         }
       }
     }
 
+    console.log('[Planning Utils] Returning', messages.length, 'assistant messages');
     return messages;
   } catch (err) {
     console.error('[Planning Utils] Failed to get messages from OpenClaw:', err);

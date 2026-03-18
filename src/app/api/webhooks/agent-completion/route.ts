@@ -2,9 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createHmac } from 'crypto';
 import { queryOne, queryAll, run } from '@/lib/db';
-import type { Task, Agent, OpenClawSession } from '@/lib/types';
+import type { Task, Agent, OpenClawSession, TaskDeliverable } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Check if task has testable deliverables (HTML files or HTTP URLs)
+ */
+function hasTestableDeliverables(taskId: string): boolean {
+  const deliverables = queryAll<TaskDeliverable>(
+    'SELECT * FROM task_deliverables WHERE task_id = ? AND deliverable_type IN (?, ?)',
+    [taskId, 'file', 'url']
+  );
+
+  if (deliverables.length === 0) return false;
+
+  return deliverables.some(d => {
+    if (d.deliverable_type === 'file') {
+      return d.path?.endsWith('.html') || d.path?.endsWith('.htm');
+    }
+    if (d.deliverable_type === 'url') {
+      return d.path?.startsWith('http://') || d.path?.startsWith('https://');
+    }
+    return false;
+  });
+}
+
+/**
+ * Auto-trigger testing for a task
+ */
+async function autoTriggerTesting(taskId: string): Promise<void> {
+  try {
+    // Call the test endpoint internally
+    const testUrl = `http://localhost:4000/api/tasks/${taskId}/test`;
+    await fetch(testUrl, { method: 'POST' });
+  } catch (error) {
+    console.error(`[WEBHOOK] Auto-test failed for task ${taskId}:`, error);
+  }
+}
+
 /**
  * Verify HMAC-SHA256 signature of webhook request
  */
@@ -81,11 +117,53 @@ export async function POST(request: NextRequest) {
 
       // Only move to testing if not already in testing, review, or done
       // (Don't overwrite user's approval or testing results)
+      let shouldTest = false;
       if (task.status !== 'testing' && task.status !== 'review' && task.status !== 'done') {
-        run(
-          'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
-          ['testing', now, task.id]
-        );
+        // Check if task has testable deliverables
+        shouldTest = hasTestableDeliverables(task.id);
+        
+        if (shouldTest) {
+          // Move to testing and auto-trigger tests
+          run(
+            'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
+            ['testing', now, task.id]
+          );
+          
+          // Auto-trigger testing (fire and forget)
+          autoTriggerTesting(task.id);
+          
+          // Log that testing was auto-triggered
+          run(
+            `INSERT INTO task_activities (id, task_id, activity_type, message, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              uuidv4(),
+              task.id,
+              'status_changed',
+              'Task moved to TESTING - auto-triggering automated verification',
+              now
+            ]
+          );
+        } else {
+          // No testable deliverables - skip to review
+          run(
+            'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
+            ['review', now, task.id]
+          );
+          
+          // Log skip
+          run(
+            `INSERT INTO task_activities (id, task_id, activity_type, message, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              uuidv4(),
+              task.id,
+              'status_changed',
+              'Task moved to REVIEW - no testable deliverables (docs/proposals skip testing)',
+              now
+            ]
+          );
+        }
       }
 
       // Log completion
@@ -113,8 +191,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         task_id: task.id,
-        new_status: 'testing',
-        message: 'Task moved to testing for automated verification'
+        new_status: shouldTest ? 'testing' : 'review',
+        message: shouldTest 
+          ? 'Task moved to testing for automated verification'
+          : 'Task moved to review (no testable deliverables)'
       });
     }
 
@@ -165,11 +245,53 @@ export async function POST(request: NextRequest) {
 
       // Only move to testing if not already in testing, review, or done
       // (Don't overwrite user's approval or testing results)
+      let sessionShouldTest = false;
       if (task.status !== 'testing' && task.status !== 'review' && task.status !== 'done') {
-        run(
-          'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
-          ['testing', now, task.id]
-        );
+        // Check if task has testable deliverables
+        sessionShouldTest = hasTestableDeliverables(task.id);
+        
+        if (sessionShouldTest) {
+          // Move to testing and auto-trigger tests
+          run(
+            'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
+            ['testing', now, task.id]
+          );
+          
+          // Auto-trigger testing (fire and forget)
+          autoTriggerTesting(task.id);
+          
+          // Log that testing was auto-triggered
+          run(
+            `INSERT INTO task_activities (id, task_id, activity_type, message, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              uuidv4(),
+              task.id,
+              'status_changed',
+              'Task moved to TESTING - auto-triggering automated verification',
+              now
+            ]
+          );
+        } else {
+          // No testable deliverables - skip to review
+          run(
+            'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
+            ['review', now, task.id]
+          );
+          
+          // Log skip
+          run(
+            `INSERT INTO task_activities (id, task_id, activity_type, message, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              uuidv4(),
+              task.id,
+              'status_changed',
+              'Task moved to REVIEW - no testable deliverables (docs/proposals skip testing)',
+              now
+            ]
+          );
+        }
       }
 
       // Log completion with summary
@@ -197,8 +319,10 @@ export async function POST(request: NextRequest) {
         task_id: task.id,
         agent_id: session.agent_id,
         summary,
-        new_status: 'testing',
-        message: 'Task moved to testing for automated verification'
+        new_status: sessionShouldTest ? 'testing' : 'review',
+        message: sessionShouldTest
+          ? 'Task moved to testing for automated verification'
+          : 'Task moved to review (no testable deliverables)'
       });
     }
 
