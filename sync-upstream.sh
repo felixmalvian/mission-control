@@ -1,9 +1,14 @@
 #!/bin/bash
 # Mission Control - Sync Upstream Updates Script
-# Usage: ./sync-upstream.sh
-# This script fetches updates from the original repo and merges them
+# Usage: ./sync-upstream.sh [--auto]
+#   --auto    Skip confirmations and auto-rebuild
 
 set -e
+
+AUTO_MODE=false
+if [ "$1" = "--auto" ]; then
+    AUTO_MODE=true
+fi
 
 echo "🔄 Mission Control - Sync with Upstream"
 echo "========================================"
@@ -45,12 +50,18 @@ echo ""
 echo "📊 Commits to sync:"
 git log --oneline HEAD..upstream/main
 
-echo ""
-echo -e "${YELLOW}⚠️  About to merge upstream changes${NC}"
-echo -e "${YELLOW}   Your custom fixes (webhook logic, status API) will be preserved${NC}"
-echo ""
-read -p "Continue with merge? (y/n) " -n 1 -r
-echo
+if [ "$AUTO_MODE" = true ]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  Auto mode: merging without confirmation${NC}"
+    REPLY="y"
+else
+    echo ""
+    echo -e "${YELLOW}⚠️  About to merge upstream changes${NC}"
+    echo -e "${YELLOW}   Your custom fixes (webhook logic, status API) will be preserved${NC}"
+    echo ""
+    read -p "Continue with merge? (y/n) " -n 1 -r
+    echo
+fi
 
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborted."
@@ -83,12 +94,9 @@ echo "📤 Pushing to your fork..."
 git push origin main
 echo -e "${GREEN}✓ Sync complete!${NC}"
 
-echo ""
-echo "🐳 Rebuilding Docker container..."
-read -p "Rebuild now? (y/n) " -n 1 -r
-echo
-
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ "$AUTO_MODE" = true ]; then
+    echo ""
+    echo "🐳 Auto-rebuilding Docker container..."
     docker build -t mission-control:latest . && \
     docker stop mission-control 2>/dev/null || true && \
     docker rm mission-control 2>/dev/null || true && \
@@ -98,6 +106,23 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         --restart unless-stopped \
         mission-control:latest
     echo -e "${GREEN}✓ Container rebuilt and started!${NC}"
+else
+    echo ""
+    echo "🐳 Rebuilding Docker container..."
+    read -p "Rebuild now? (y/n) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker build -t mission-control:latest . && \
+        docker stop mission-control 2>/dev/null || true && \
+        docker rm mission-control 2>/dev/null || true && \
+        docker run -d --name mission-control --network host --user node \
+            -v /home/felix:/app/workspace \
+            -v /home/felix/openclaw/mission-control/data:/app/data \
+            --restart unless-stopped \
+            mission-control:latest
+        echo -e "${GREEN}✓ Container rebuilt and started!${NC}"
+    fi
 fi
 
 echo ""
